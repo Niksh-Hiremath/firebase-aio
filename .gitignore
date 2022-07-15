@@ -2,5 +2,4 @@
 pyrebase/__pycache__/
 test/
 .env
-main.py
-cogs/
+test.py

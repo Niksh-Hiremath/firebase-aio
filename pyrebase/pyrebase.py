@@ -260,7 +260,7 @@ class Database:
         self.path = ""
         headers = self.build_headers(token)
         headers['if-match'] = etag
-        async with self.aiohttp.delete(request_object, headers=headers) as request_object:
+        async with self.aiohttp.delete(request_ref, headers=headers) as request_object:
             # ETag didn't match, so we should return the correct one for the user to try again
             if request_object.status_code == 412:
                 return {'ETag': request_object.headers['ETag']}

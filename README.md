@@ -49,94 +49,10 @@ Adding a service account will authenticate as an admin by default for all databa
 
 ### Use Services
 
-A Pyrebase app can use multiple Firebase services.
+A Pyrebase app can only use Firebase database services.
 
-```firebase.auth()``` - [Authentication](#authentication)
 ```firebase.database()``` - [Database](#database)
-```firebase.storage()``` - [Storage](#storage)
-Check out the documentation for each service for further details.
-## Authentication
-The ```sign_in_with_email_and_password()``` method will return user data including a token you can use to adhere to security rules.
-Each of the following methods accepts a user token: ```get()```, ```push()```, ```set()```, ```update()```, ```remove()``` and ```stream()```.
-```python
-# Get a reference to the auth service
-auth = firebase.auth()
-# Log the user in
-user = await auth.sign_in_with_email_and_password(email, password)
-# Log the user in anonymously
-user = await auth.sign_in_anonymous()
-# Get user info
-user = await auth.get_account_info()
-# Get a reference to the database service
-db = firebase.database()
-# data to save
-data = {
-    "name": "Mortimer 'Morty' Smith"
-}
-# Pass the user's idToken to the push method
-results = await db.child("users").push(data, user['idToken'])
-```
-
-### Token expiry
-
-A user's idToken expires after 1 hour, so be sure to use the user's refreshToken to avoid stale tokens.
-```
-user = await auth.sign_in_with_email_and_password(email, password)
-# before the 1 hour expiry:
-user = await auth.refresh(user['refreshToken'])
-# now we have a fresh token
-user['idToken']
-```
-
-### Custom tokens
-
-You can also create users using [custom tokens](https://firebase.google.com/docs/auth/server/create-custom-tokens), for example:
-```
-token = await auth.create_custom_token("your_custom_id")
-```
-You can also pass in additional claims.
-```
-token_with_additional_claims = await auth.create_custom_token("your_custom_id", {"premium_account": True})
-```
-You can then send these tokens to the client to sign in, or sign in as the user on the server.
-```
-user = await auth.sign_in_with_custom_token(token)
-```
-
-### Manage Users
-
-#### Creating users
-
-```python
-await auth.create_user_with_email_and_password(email, password)
-```
-Note: Make sure you have the Email/password provider enabled in your Firebase dashboard under Auth -> Sign In Method.
-
-#### Verifying emails
-
-```python
-await auth.send_email_verification(user['idToken'])
-```
-
-#### Sending password reset emails
-
-```python
-await auth.send_password_reset_email("email")
-```
-
-#### Get account information
-```python
-await auth.get_account_info(user['idToken'])
-```
-
-#### Refreshing tokens
-```python
-await user = auth.refresh(user['refreshToken'])
-```
-#### Delete account
-```python
-await auth.delete_user_account(user['idToken'])
-```
+Check out the documentation for the service for further details.
 
 ## Database
 
@@ -376,55 +292,6 @@ When using ```order_by_value()```, children are ordered by their value.
 
 ```python
 users_by_value = await db.child("users").order_by_value().get()
-```
-
-
-## Storage
-
-The storage service allows you to upload images to Firebase.
-
-### child
-
-Just like with the Database service, you can build paths to your data with the Storage service.
-
-```python
-storage.child("images/example.jpg")
-```
-
-### put
-
-The put method takes the path to the local file and an optional user token.
-
-```python
-storage = firebase.storage()
-# as admin
-await storage.child("images/example.jpg").put("example2.jpg")
-# as user
-await storage.child("images/example.jpg").put("example2.jpg", user['idToken'])
-```
-
-### download
-
-The download method takes the path to the saved database file and the name you want the downloaded file to have.
-
-```python
-await storage.child("images/example.jpg").download("downloaded.jpg")
-```
-
-### get_url
-
-The get_url method takes the path to the saved database file and user token which returns the storage url.
-
-```python
-storage.child("images/example.jpg").get_url(user["idToken"])
-# https://firebasestorage.googleapis.com/v0/b/storage-url.appspot.com/o/images%2Fexample.jpg?alt=media
-```
-
-### delete
-
-The delete method takes the path to the saved database file and user token.
-```python
-await storage.delete("images/example.jpg",user["idToken"])
 ```
 
 ### Helper Methods
