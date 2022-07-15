@@ -1,3 +1,5 @@
 .venv/
 firebaseaio/__pycache__/
 .env
+firebaseaio.egg-info/
+dist/

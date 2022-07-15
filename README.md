@@ -5,7 +5,7 @@ A simple async python wrapper for the [Firebase API](https://firebase.google.com
 ## Installation
 
 ```python
-pip install git+https://github.com/09ghostrider/firebase-aio
+pip install firebaseaio
 ```
 
 ## Getting Started
