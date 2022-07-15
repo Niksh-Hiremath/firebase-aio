@@ -12,28 +12,28 @@ pip install git+https://github.com/09ghostrider/firebase-aio
 
 ### Python Version
 
-Pyrebase was written for python 3 and will not work correctly with python 2.
+Firebase-aio was written for python 3 and will not work correctly with python 2.
 
-### Add Pyrebase to your application
+### Add firebase-aio to your application
 
 For use with only user based authentication we can create the following configuration:
 
 ```python
-import pyrebase
+import firebaseaio
 config = {
   "apiKey": "apiKey",
   "authDomain": "projectId.firebaseapp.com",
   "databaseURL": "https://databaseName.firebaseio.com",
   "storageBucket": "projectId.appspot.com"
 }
-firebase = pyrebase.initialize_app(config)
+firebase = firebaseaio.initialize_app(config)
 ```
 
 We can optionally add a [service account credential](https://firebase.google.com/docs/server/setup#prerequisites) to our
 configuration that will allow our server to authenticate with Firebase as an admin and disregard any security rules.
 
 ```python
-import pyrebase
+import firebaseaio
 config = {
   "apiKey": "apiKey",
   "authDomain": "projectId.firebaseapp.com",
@@ -41,7 +41,7 @@ config = {
   "storageBucket": "projectId.appspot.com",
   "serviceAccount": "path/to/serviceAccountCredentials.json"
 }
-firebase = pyrebase.initialize_app(config)
+firebase = firebaseaio.initialize_app(config)
 ```
 
 Adding a service account will authenticate as an admin by default for all database queries, check out the
@@ -49,10 +49,10 @@ Adding a service account will authenticate as an admin by default for all databa
 
 ### Use Services
 
-A Pyrebase app can only use Firebase database services.
+A firebase-aio app can only use Firebase database services.
 
 ```firebase.database()``` - [Database](#database)
-Check out the documentation for the service for further details.
+Check out the [Database documentation](#database) for further details.
 
 ## Database
 
@@ -213,7 +213,7 @@ You can listen to live changes to your data with the ```stream()``` method.
 def stream_handler(message):
     print(message["event"]) # put
     print(message["path"]) # /-K7yGTTEp7O549EzTYtI
-    print(message["data"]) # {'title': 'Pyrebase', "body": "etc..."}
+    print(message["data"]) # {'title': 'firebaseaio', "body": "etc..."}
 my_stream = db.child("posts").stream(stream_handler)
 ```
 
