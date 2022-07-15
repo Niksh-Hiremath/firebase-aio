@@ -1,6 +1,6 @@
 # Pyrebase4
 
-A simple python wrapper for the [Firebase API](https://firebase.google.com).
+A simple async python wrapper for the [Firebase API](https://firebase.google.com).
 
 ## Installation
 
