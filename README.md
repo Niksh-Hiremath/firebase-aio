@@ -51,7 +51,7 @@ Adding a service account will authenticate as an admin by default for all databa
 
 A firebase-aio app can only use Firebase database services.
 
-```firebase.database()``` - [Database](#database)
+```firebase.database()``` - 
 Check out the [Database documentation](#database) for further details.
 
 ## Database
