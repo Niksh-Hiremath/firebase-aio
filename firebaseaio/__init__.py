@@ -1,0 +1,1 @@
+from .firebaseaio import initialize_app

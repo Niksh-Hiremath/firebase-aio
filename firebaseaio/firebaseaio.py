@@ -7,7 +7,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from collections import OrderedDict
 import threading
 import socket
-from .pyre_sseclient import SSEClient
+from .sseclient import SSEClient
 
 try:
     from urllib.parse import urlencode

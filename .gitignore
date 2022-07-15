@@ -1,5 +1,3 @@
 .venv/
-pyrebase/__pycache__/
-test/
+firebaseaio/__pycache__/
 .env
-test.py

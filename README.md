@@ -1,11 +1,11 @@
-# Pyrebase4
+# Firebase-aio
 
 A simple async python wrapper for the [Firebase API](https://firebase.google.com).
 
 ## Installation
 
 ```python
-pip install git+https://github.com/09ghostrider/Async-PyreBase-wrapper.git
+pip install git+https://github.com/09ghostrider/firebase-aio
 ```
 
 ## Getting Started
