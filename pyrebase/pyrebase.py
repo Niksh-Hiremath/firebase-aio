@@ -11,7 +11,7 @@ from Crypto.PublicKey import RSA
 from collections import OrderedDict
 import threading
 import socket
-from pyre_sseclient import SSEClient
+from .pyre_sseclient import SSEClient
 
 try:
     from urllib.parse import quote, urlencode
@@ -65,18 +65,18 @@ class Auth:
         headers = {"content-type": "application/json; charset=UTF-8"}
         data = json.dumps({"email": email, "password": password, "returnSecureToken": True})
         async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:        
-            raise_detailed_error(request_object)
+            await raise_detailed_error(request_object)
             self.current_user = request_object.json()
-            return request_object.json()
+            return await request_object.json()
 
     async def sign_in_anonymous(self):
         request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/signupNewUser?key={0}".format(self.api_key)
         headers = {"content-type": "application/json; charset=UTF-8" }
         data = json.dumps({"returnSecureToken": True})
         async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            raise_detailed_error(request_object)
+            await raise_detailed_error(request_object)
             self.current_user = request_object.json()
-            return request_object.json()
+            return await request_object.json()
 
     async def create_custom_token(self, uid, additional_claims=None, expiry_minutes=60):
         service_account_email = self.credentials.service_account_email
@@ -97,15 +97,15 @@ class Auth:
         headers = {"content-type": "application/json; charset=UTF-8"}
         data = json.dumps({"returnSecureToken": True, "token": token})
         async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            raise_detailed_error(request_object)
-            return request_object.json()
+            await raise_detailed_error(request_object)
+            return await request_object.json()
 
     async def refresh(self, refresh_token):
         request_ref = "https://securetoken.googleapis.com/v1/token?key={0}".format(self.api_key)
         headers = {"content-type": "application/json; charset=UTF-8"}
         data = json.dumps({"grantType": "refresh_token", "refreshToken": refresh_token})
         async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            raise_detailed_error(request_object)
+            await raise_detailed_error(request_object)
             request_object_json = request_object.json()
             # handle weirdly formatted response
             user = {
@@ -120,48 +120,48 @@ class Auth:
         headers = {"content-type": "application/json; charset=UTF-8"}
         data = json.dumps({"idToken": id_token})
         async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            raise_detailed_error(request_object)
-            return request_object.json()
+            await raise_detailed_error(request_object)
+            return await request_object.json()
 
     async def send_email_verification(self, id_token):
         request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/getOobConfirmationCode?key={0}".format(self.api_key)
         headers = {"content-type": "application/json; charset=UTF-8"}
         data = json.dumps({"requestType": "VERIFY_EMAIL", "idToken": id_token})
         async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            raise_detailed_error(request_object)
-            return request_object.json()
+            await raise_detailed_error(request_object)
+            return await request_object.json()
 
     async def send_password_reset_email(self, email):
         request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/getOobConfirmationCode?key={0}".format(self.api_key)
         headers = {"content-type": "application/json; charset=UTF-8"}
         data = json.dumps({"requestType": "PASSWORD_RESET", "email": email})
         async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            raise_detailed_error(request_object)
-            return request_object.json()
+            await raise_detailed_error(request_object)
+            return await request_object.json()
 
     async def verify_password_reset_code(self, reset_code, new_password):
         request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/resetPassword?key={0}".format(self.api_key)
         headers = {"content-type": "application/json; charset=UTF-8"}
         data = json.dumps({"oobCode": reset_code, "newPassword": new_password})
         async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            raise_detailed_error(request_object)
-            return request_object.json()
+            await raise_detailed_error(request_object)
+            return await request_object.json()
 
     async def create_user_with_email_and_password(self, email, password):
         request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/signupNewUser?key={0}".format(self.api_key)
         headers = {"content-type": "application/json; charset=UTF-8" }
         data = json.dumps({"email": email, "password": password, "returnSecureToken": True})
         async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            raise_detailed_error(request_object)
-            return request_object.json()
+            await raise_detailed_error(request_object)
+            return await request_object.json()
 
     async def delete_user_account(self, id_token):
         request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/deleteAccount?key={0}".format(self.api_key)
         headers = {"content-type": "application/json; charset=UTF-8"}
         data = json.dumps({"idToken": id_token})
         async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            raise_detailed_error(request_object)
-            return request_object.json()
+            await raise_detailed_error(request_object)
+            return await request_object.json()
 
 
 class Database:
@@ -261,8 +261,8 @@ class Database:
         headers = self.build_headers(token)
         # do request
         async with self.aiohttp.get(request_ref, headers=headers) as request_object:
-            raise_detailed_error(request_object)
-            request_dict = request_object.json(**json_kwargs)
+            await raise_detailed_error(request_object)
+            request_dict = await request_object.json(**json_kwargs)
 
         # if primitive or simple query return
         if isinstance(request_dict, list):
@@ -290,32 +290,32 @@ class Database:
         self.path = ""
         headers = self.build_headers(token)
         async with self.aiohttp.post(request_ref, data=json.dumps(data, **json_kwargs).encode("utf-8"), headers=headers) as request_object:
-            raise_detailed_error(request_object)
-            return request_object.json()
+            await raise_detailed_error(request_object)
+            return await request_object.json()
 
     async def set(self, data, token=None, json_kwargs={}):
         request_ref = self.check_token(self.database_url, self.path, token)
         self.path = ""
         headers = self.build_headers(token)
         async with self.aiohttp.put(request_ref, data=json.dumps(data, **json_kwargs).encode("utf-8"), headers=headers) as request_object:
-            raise_detailed_error(request_object)
-            return request_object.json()
+            await raise_detailed_error(request_object)
+            return await request_object.json()
 
     async def update(self, data, token=None, json_kwargs={}):
         request_ref = self.check_token(self.database_url, self.path, token)
         self.path = ""
         headers = self.build_headers(token)
         async with self.aiohttp.patch(request_ref, data=json.dumps(data, **json_kwargs).encode("utf-8"), headers=headers) as request_object:
-            raise_detailed_error(request_object)
-            return request_object.json()
+            await raise_detailed_error(request_object)
+            return await request_object.json()
 
     async def remove(self, token=None):
         request_ref = self.check_token(self.database_url, self.path, token)
         self.path = ""
         headers = self.build_headers(token)
         async with self.aiohttp.delete(request_ref, headers=headers) as request_object:
-            raise_detailed_error(request_object)
-            return request_object.json()
+            await raise_detailed_error(request_object)
+            return await request_object.json()
 
     def stream(self, stream_handler, token=None, stream_id=None, is_async=True):
         request_ref = self.build_request_url(token)
@@ -364,7 +364,7 @@ class Database:
         # extra header to get ETag
         headers['X-Firebase-ETag'] = 'true'
         async with self.aiohttp.post(request_ref, headers=headers) as request_object:
-            raise_detailed_error(request_object)
+            await raise_detailed_error(request_object)
             return request_object.headers['ETag']
 
     async def conditional_set(self, data, etag, token=None, json_kwargs={}):
@@ -377,8 +377,8 @@ class Database:
             if request_object.status_code == 412:
                 return {'ETag': request_object.headers['ETag']}
 
-            raise_detailed_error(request_object)
-            return request_object.json()
+            await raise_detailed_error(request_object)
+            return await request_object.json()
 
     async def conditional_remove(self, etag, token=None):
         request_ref = self.check_token(self.database_url, self.path, token)
@@ -390,8 +390,8 @@ class Database:
             if request_object.status_code == 412:
                 return {'ETag': request_object.headers['ETag']}
 
-            raise_detailed_error(request_object)
-            return request_object.json()
+            await raise_detailed_error(request_object)
+            return await request_object.json()
 
 
 class Storage:
@@ -427,8 +427,8 @@ class Storage:
         if token:
             headers = {"Authorization": "Firebase " + token}
             async with self.aiohttp.post(request_ref, data=file_object, headers=headers) as request_object:
-                raise_detailed_error(request_object)
-                return request_object.json()
+                await raise_detailed_error(request_object)
+                return await request_object.json()
         elif self.credentials:
             blob = self.bucket.blob(path)
             if isinstance(file, str):
@@ -437,8 +437,8 @@ class Storage:
                 return blob.upload_from_file(file_obj=file)
         else:
             async with self.aiohttp.post(request_ref, data=file_object) as request_object:
-                raise_detailed_error(request_object)
-                return request_object.json()
+                await raise_detailed_error(request_object)
+                return await request_object.json()
 
     async def delete(self, name, token):
         if self.credentials:
@@ -448,10 +448,10 @@ class Storage:
             if token:
                 headers = {"Authorization": "Firebase " + token}
                 async with self.aiohttp.delete(request_ref, headers=headers) as request_object:
-                    raise_detailed_error(request_object)
+                    await raise_detailed_error(request_object)
             else:
                 async with self.aiohttp.delete(request_ref) as request_object:
-                    raise_detailed_error(request_object)
+                    await raise_detailed_error(request_object)
 
     async def download(self, path, filename, token=None):
         # remove leading backlash
@@ -491,11 +491,8 @@ class Storage:
         return self.bucket.list_blobs()
 
 
-def raise_detailed_error(request_object):
-    try:
-        request_object.raise_for_status()
-    except aiohttp.ClientResponseError as e:
-        raise aiohttp.ClientResponseError(e, message=request_object.text)
+async def raise_detailed_error(request_object):
+    request_object.raise_for_status()
 
 
 def convert_to_pyre(items):
