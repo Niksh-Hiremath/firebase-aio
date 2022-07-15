@@ -4,19 +4,15 @@ import math
 from random import randrange
 import time
 from oauth2client.service_account import ServiceAccountCredentials
-from gcloud import storage
-import datetime
-import python_jwt as jwt
-from Crypto.PublicKey import RSA
 from collections import OrderedDict
 import threading
 import socket
 from .pyre_sseclient import SSEClient
 
 try:
-    from urllib.parse import quote, urlencode
+    from urllib.parse import urlencode
 except:
-    from urllib import quote, urlencode
+    from urllib import urlencode
 
 def initialize_app(config):
     return Firebase(config)
@@ -25,9 +21,7 @@ class Firebase:
     """ Firebase Interface """
     def __init__(self, config):
         self.api_key = config["apiKey"]
-        self.auth_domain = config["authDomain"]
         self.database_url = config["databaseURL"]
-        self.storage_bucket = config["storageBucket"]
         self.credentials = None
         self.aiohttp = aiohttp.ClientSession()
         if config.get("serviceAccount"):
@@ -42,127 +36,8 @@ class Firebase:
             if service_account_type is dict:
                 self.credentials = ServiceAccountCredentials.from_json_keyfile_dict(config["serviceAccount"], scopes)
 
-    def auth(self):
-        return Auth(self.api_key, self.aiohttp, self.credentials)
-
     def database(self):
         return Database(self.credentials, self.api_key, self.database_url, self.aiohttp)
-
-    def storage(self):
-        return Storage(self.credentials, self.storage_bucket, self.aiohttp)
-
-
-class Auth:
-    """ Authentication Service """
-    def __init__(self, api_key, aiohttp, credentials):
-        self.api_key = api_key
-        self.current_user = None
-        self.aiohttp = aiohttp
-        self.credentials = credentials
-
-    async def sign_in_with_email_and_password(self, email, password):
-        request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key={0}".format(self.api_key)
-        headers = {"content-type": "application/json; charset=UTF-8"}
-        data = json.dumps({"email": email, "password": password, "returnSecureToken": True})
-        async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:        
-            await raise_detailed_error(request_object)
-            self.current_user = request_object.json()
-            return await request_object.json()
-
-    async def sign_in_anonymous(self):
-        request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/signupNewUser?key={0}".format(self.api_key)
-        headers = {"content-type": "application/json; charset=UTF-8" }
-        data = json.dumps({"returnSecureToken": True})
-        async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            await raise_detailed_error(request_object)
-            self.current_user = request_object.json()
-            return await request_object.json()
-
-    async def create_custom_token(self, uid, additional_claims=None, expiry_minutes=60):
-        service_account_email = self.credentials.service_account_email
-        private_key = RSA.importKey(self.credentials._private_key_pkcs8_pem)
-        payload = {
-            "iss": service_account_email,
-            "sub": service_account_email,
-            "aud": "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit",
-            "uid": uid
-        }
-        if additional_claims:
-            payload["claims"] = additional_claims
-        exp = datetime.timedelta(minutes=expiry_minutes)
-        return jwt.generate_jwt(payload, private_key, "RS256", exp)
-
-    async def sign_in_with_custom_token(self, token):
-        request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyCustomToken?key={0}".format(self.api_key)
-        headers = {"content-type": "application/json; charset=UTF-8"}
-        data = json.dumps({"returnSecureToken": True, "token": token})
-        async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            await raise_detailed_error(request_object)
-            return await request_object.json()
-
-    async def refresh(self, refresh_token):
-        request_ref = "https://securetoken.googleapis.com/v1/token?key={0}".format(self.api_key)
-        headers = {"content-type": "application/json; charset=UTF-8"}
-        data = json.dumps({"grantType": "refresh_token", "refreshToken": refresh_token})
-        async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            await raise_detailed_error(request_object)
-            request_object_json = request_object.json()
-            # handle weirdly formatted response
-            user = {
-                "userId": request_object_json["user_id"],
-                "idToken": request_object_json["id_token"],
-                "refreshToken": request_object_json["refresh_token"]
-            }
-            return user
-
-    async def get_account_info(self, id_token):
-        request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/getAccountInfo?key={0}".format(self.api_key)
-        headers = {"content-type": "application/json; charset=UTF-8"}
-        data = json.dumps({"idToken": id_token})
-        async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            await raise_detailed_error(request_object)
-            return await request_object.json()
-
-    async def send_email_verification(self, id_token):
-        request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/getOobConfirmationCode?key={0}".format(self.api_key)
-        headers = {"content-type": "application/json; charset=UTF-8"}
-        data = json.dumps({"requestType": "VERIFY_EMAIL", "idToken": id_token})
-        async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            await raise_detailed_error(request_object)
-            return await request_object.json()
-
-    async def send_password_reset_email(self, email):
-        request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/getOobConfirmationCode?key={0}".format(self.api_key)
-        headers = {"content-type": "application/json; charset=UTF-8"}
-        data = json.dumps({"requestType": "PASSWORD_RESET", "email": email})
-        async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            await raise_detailed_error(request_object)
-            return await request_object.json()
-
-    async def verify_password_reset_code(self, reset_code, new_password):
-        request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/resetPassword?key={0}".format(self.api_key)
-        headers = {"content-type": "application/json; charset=UTF-8"}
-        data = json.dumps({"oobCode": reset_code, "newPassword": new_password})
-        async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            await raise_detailed_error(request_object)
-            return await request_object.json()
-
-    async def create_user_with_email_and_password(self, email, password):
-        request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/signupNewUser?key={0}".format(self.api_key)
-        headers = {"content-type": "application/json; charset=UTF-8" }
-        data = json.dumps({"email": email, "password": password, "returnSecureToken": True})
-        async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            await raise_detailed_error(request_object)
-            return await request_object.json()
-
-    async def delete_user_account(self, id_token):
-        request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/deleteAccount?key={0}".format(self.api_key)
-        headers = {"content-type": "application/json; charset=UTF-8"}
-        data = json.dumps({"idToken": id_token})
-        async with self.aiohttp.post(request_ref, data=data, headers=headers) as request_object:
-            await raise_detailed_error(request_object)
-            return await request_object.json()
-
 
 class Database:
     """ Database Service """
@@ -393,107 +268,8 @@ class Database:
             await raise_detailed_error(request_object)
             return await request_object.json()
 
-
-class Storage:
-    """ Storage Service """
-    def __init__(self, credentials, storage_bucket, aiohttp):
-        self.storage_bucket = "https://firebasestorage.googleapis.com/v0/b/" + storage_bucket
-        self.credentials = credentials
-        self.aiohttp = aiohttp
-        self.path = ""
-        if credentials:
-            client = storage.Client(credentials=credentials, project=storage_bucket)
-            self.bucket = client.get_bucket(storage_bucket)
-
-    def child(self, *args):
-        new_path = "/".join(args)
-        if self.path:
-            self.path += "/{}".format(new_path)
-        else:
-            if new_path.startswith("/"):
-                new_path = new_path[1:]
-            self.path = new_path
-        return self
-
-    async def put(self, file, token=None):
-        # reset path
-        path = self.path
-        self.path = None
-        if isinstance(file, str):
-            file_object = open(file, 'rb')
-        else:
-            file_object = file
-        request_ref = self.storage_bucket + "/o?name={0}".format(path)
-        if token:
-            headers = {"Authorization": "Firebase " + token}
-            async with self.aiohttp.post(request_ref, data=file_object, headers=headers) as request_object:
-                await raise_detailed_error(request_object)
-                return await request_object.json()
-        elif self.credentials:
-            blob = self.bucket.blob(path)
-            if isinstance(file, str):
-                return blob.upload_from_filename(filename=file)
-            else:
-                return blob.upload_from_file(file_obj=file)
-        else:
-            async with self.aiohttp.post(request_ref, data=file_object) as request_object:
-                await raise_detailed_error(request_object)
-                return await request_object.json()
-
-    async def delete(self, name, token):
-        if self.credentials:
-            self.bucket.delete_blob(name)
-        else:
-            request_ref = self.storage_bucket + "/o?name={0}".format(name)
-            if token:
-                headers = {"Authorization": "Firebase " + token}
-                async with self.aiohttp.delete(request_ref, headers=headers) as request_object:
-                    await raise_detailed_error(request_object)
-            else:
-                async with self.aiohttp.delete(request_ref) as request_object:
-                    await raise_detailed_error(request_object)
-
-    async def download(self, path, filename, token=None):
-        # remove leading backlash
-        url = self.get_url(token)
-        if path.startswith('/'):
-            path = path[1:]
-        if self.credentials:
-            blob = self.bucket.get_blob(path)
-            if not blob is None:
-                blob.download_to_filename(filename)
-        elif token:
-            headers = {"Authorization": "Firebase " + token}
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, stream=True, headers=headers) as r:
-                    if r.status_code == 200:
-                        with open(filename, 'wb') as f:
-                            for chunk in r:
-                                    f.write(chunk)
-        else:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, stream=True) as r:
-                    if r.status_code == 200:
-                        with open(filename, 'wb') as f:
-                            for chunk in r:
-                                f.write(chunk)
-
-    def get_url(self, token):
-        path = self.path
-        self.path = None
-        if path.startswith('/'):
-            path = path[1:]
-        if token:
-            return "{0}/o/{1}?alt=media&token={2}".format(self.storage_bucket, quote(path, safe=''), token)
-        return "{0}/o/{1}?alt=media".format(self.storage_bucket, quote(path, safe=''))
-
-    def list_files(self):
-        return self.bucket.list_blobs()
-
-
 async def raise_detailed_error(request_object):
     request_object.raise_for_status()
-
 
 def convert_to_pyre(items):
     pyre_list = []
@@ -501,13 +277,11 @@ def convert_to_pyre(items):
         pyre_list.append(Pyre(item))
     return pyre_list
 
-
 def convert_list_to_pyre(items):
     pyre_list = []
     for item in items:
         pyre_list.append(Pyre([items.index(item), item]))
     return pyre_list
-
 
 class PyreResponse:
     def __init__(self, pyres, query_key):
@@ -541,7 +315,6 @@ class PyreResponse:
         if isinstance(self.pyres, list):
             return self.pyres
 
-
 class Pyre:
     def __init__(self, item):
         self.item = item
@@ -551,7 +324,6 @@ class Pyre:
 
     def key(self):
         return self.item[0]
-
 
 class ClosableSSEClient(SSEClient):
     def __init__(self, *args, **kwargs):
@@ -569,7 +341,6 @@ class ClosableSSEClient(SSEClient):
         self.retry = 0
         self.resp.raw._fp.fp.raw._sock.shutdown(socket.SHUT_RDWR)
         self.resp.raw._fp.fp.raw._sock.close()
-
 
 class Stream:
     def __init__(self, url, stream_handler, build_headers, stream_id, is_async):

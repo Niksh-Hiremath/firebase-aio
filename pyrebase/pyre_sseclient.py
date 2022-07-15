@@ -4,7 +4,6 @@ import warnings
 import aiohttp
 import asyncio
 
-
 # Technically, we should support streams that mix line endings.  This regex,
 # however, assumes that a system will provide consistent line endings.
 end_of_field = re.compile(r'\r\n\r\n|\r\r|\n\n')
